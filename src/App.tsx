@@ -31,6 +31,8 @@ export default function App() {
   const [isDelegating, setIsDelegating] = useState(false)
   const [isGrantingRight, setIsGrantingRight] = useState(false)
 
+  const [hasRightToVote, setHasRightToVote] = useState(false)
+
   const currentAddress = chainId ? CONTRACT_ADDRESSES[chainId] : undefined
 
   // Write Hook
@@ -121,7 +123,10 @@ export default function App() {
   useEffect(() => {
     if (voterData) {
         // voterData is [weight, voted, delegate, vote]
-        setHasVoted(voterData[1])
+        const weight = voterData[0]
+        const voted = voterData[1]
+        setHasRightToVote(weight > 0n)
+        setHasVoted(voted)
     }
   }, [voterData])
 
@@ -226,6 +231,14 @@ export default function App() {
            <div className="bg-red-900/30 border border-red-800 text-red-200 px-4 py-2 rounded-xl flex items-center gap-2">
              <AlertCircle size={20} />
              <span>Please switch to Base or Celo</span>
+           </div>
+        )}
+
+        {/* Voting Right Warning */}
+        {isConnected && !hasRightToVote && !hasVoted && (
+           <div className="bg-yellow-900/30 border border-yellow-800 text-yellow-200 px-4 py-2 rounded-xl flex items-center gap-2">
+             <AlertCircle size={20} />
+             <span>You do not have voting rights yet.</span>
            </div>
         )}
 
@@ -353,7 +366,7 @@ export default function App() {
                         >
                             <span>Authorize</span>
                             <UserPlus size={20} />
-                        </button>
+        </button>
                     </div>
                 </div>
             </div>
