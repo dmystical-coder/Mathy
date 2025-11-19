@@ -31,7 +31,8 @@ export default function App() {
   const [isDelegating, setIsDelegating] = useState(false)
   const [isGrantingRight, setIsGrantingRight] = useState(false)
 
-  const [hasRightToVote, setHasRightToVote] = useState(false)
+  const [delegateStatus, setDelegateStatus] = useState<`0x${string}` | null>(null)
+  const [voteStatus, setVoteStatus] = useState<number | null>(null)
   const [votingWeight, setVotingWeight] = useState<bigint>(0n)
 
   const currentAddress = chainId ? CONTRACT_ADDRESSES[chainId] : undefined
@@ -126,9 +127,24 @@ export default function App() {
         // voterData is [weight, voted, delegate, vote]
         const weight = voterData[0]
         const voted = voterData[1]
+        const delegate = voterData[2]
+        const vote = voterData[3]
+
         setHasRightToVote(weight > 0n)
         setVotingWeight(weight)
         setHasVoted(voted)
+        
+        if (delegate !== '0x0000000000000000000000000000000000000000') {
+            setDelegateStatus(delegate)
+        } else {
+            setDelegateStatus(null)
+        }
+
+        if (voted && delegate === '0x0000000000000000000000000000000000000000') {
+            setVoteStatus(Number(vote))
+        } else {
+            setVoteStatus(null)
+        }
     }
   }, [voterData])
 
@@ -269,8 +285,15 @@ export default function App() {
         )}
         {hasVoted && !isTransactionLoading && !isConfirming && (
             <div className="bg-green-900/30 border border-green-800 text-green-200 px-6 py-3 rounded-2xl flex items-center gap-3">
-              <Trophy size={24} className="text-yellow-500" />
-              <span className="text-xl">You have voted!</span>
+              <Trophy size={24} className="text-yellow-500 shrink-0" />
+              <div className="flex flex-col">
+                  <span className="text-xl font-bold">You have voted!</span>
+                  {delegateStatus ? (
+                      <span className="text-sm opacity-80 break-all">Delegated to: {delegateStatus}</span>
+                  ) : voteStatus !== null && proposals[voteStatus] ? (
+                      <span className="text-sm opacity-80">Voted for: {proposals[voteStatus].name}</span>
+                  ) : null}
+              </div>
             </div>
         )}
         {writeError && (
