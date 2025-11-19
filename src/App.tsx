@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi'
-import { CONTRACT_ABI, CONTRACT_ADDRESS } from './constants'
+import { CONTRACT_ABI, CONTRACT_ADDRESSES } from './constants'
 import { Building2, School, Stethoscope, Trees, Trophy, Loader2, AlertCircle } from 'lucide-react'
 import { hexToString, trim } from 'viem'
 import { base, celo } from '@reown/appkit/networks'
@@ -27,6 +27,8 @@ export default function App() {
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [hasVoted, setHasVoted] = useState(false)
 
+  const currentAddress = chainId ? CONTRACT_ADDRESSES[chainId] : undefined
+
   // Write Hook
   const { data: hash, isPending: isConfirming, writeContract, error: writeError } = useWriteContract()
 
@@ -38,34 +40,39 @@ export default function App() {
   // Read Proposals - We'll try to fetch first 4 (assumed based on constructor)
   // In a real app we might need to know count or handle errors
   const { data: prop0, refetch: refetch0 } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: currentAddress,
     abi: CONTRACT_ABI,
     functionName: 'proposals',
     args: [BigInt(0)],
+    query: { enabled: !!currentAddress }
   })
   const { data: prop1, refetch: refetch1 } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: currentAddress,
     abi: CONTRACT_ABI,
     functionName: 'proposals',
     args: [BigInt(1)],
+    query: { enabled: !!currentAddress }
   })
   const { data: prop2, refetch: refetch2 } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: currentAddress,
     abi: CONTRACT_ABI,
     functionName: 'proposals',
     args: [BigInt(2)],
+    query: { enabled: !!currentAddress }
   })
   const { data: prop3, refetch: refetch3 } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: currentAddress,
     abi: CONTRACT_ABI,
     functionName: 'proposals',
     args: [BigInt(3)],
+    query: { enabled: !!currentAddress }
   })
 
   const { data: winnerName, refetch: refetchWinner } = useReadContract({
-    address: CONTRACT_ADDRESS,
+    address: currentAddress,
     abi: CONTRACT_ABI,
     functionName: 'winnerName',
+    query: { enabled: !!currentAddress }
   })
 
   // Refresh data on load and after vote
@@ -106,9 +113,9 @@ export default function App() {
   }, [prop0, prop1, prop2, prop3])
 
   const handleVote = (index: number) => {
-    if (!isConnected) return
+    if (!isConnected || !currentAddress) return
     writeContract({
-      address: CONTRACT_ADDRESS,
+      address: currentAddress,
       abi: CONTRACT_ABI,
       functionName: 'vote',
       args: [BigInt(index)],
@@ -214,7 +221,7 @@ export default function App() {
               
               {/* Decoration */}
               <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
-            </button>
+        </button>
           ))}
 
           {proposals.length === 0 && isConnected && (

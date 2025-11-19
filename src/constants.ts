@@ -1,4 +1,9 @@
-export const CONTRACT_ADDRESS = "0x299fcfac93184d6a606beb94fd990de2351df38d";
+import { base, celo } from '@reown/appkit/networks'
+
+export const CONTRACT_ADDRESSES: Record<number, `0x${string}`> = {
+  [base.id]: "0x299fcfac93184d6a606beb94fd990de2351df38d",
+  [celo.id]: "0xa228e4f56cE070241ea6261De8Bc8f982FD5A1EC"
+};
 
 export const CONTRACT_ABI = [
   {
