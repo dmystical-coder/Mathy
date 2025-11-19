@@ -31,6 +31,7 @@ export default function App() {
   const [isDelegating, setIsDelegating] = useState(false)
   const [isGrantingRight, setIsGrantingRight] = useState(false)
 
+  const [hasRightToVote, setHasRightToVote] = useState(false)
   const [delegateStatus, setDelegateStatus] = useState<`0x${string}` | null>(null)
   const [voteStatus, setVoteStatus] = useState<number | null>(null)
   const [votingWeight, setVotingWeight] = useState<bigint>(0n)
