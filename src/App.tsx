@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi'
 import { CONTRACT_ABI, CONTRACT_ADDRESSES } from './constants'
-import { Building2, School, Stethoscope, Trees, Trophy, Loader2, AlertCircle } from 'lucide-react'
-import { hexToString, trim } from 'viem'
+import { Building2, School, Stethoscope, Trees, Trophy, Loader2, AlertCircle, UserRound, ArrowRight, Crown, UserPlus } from 'lucide-react'
 import { base, celo } from '@reown/appkit/networks'
+import { hexToString, trim } from 'viem'
 import { getUserFriendlyError } from './utils/errorHandling'
 
 // Map known proposal names to icons
@@ -23,9 +23,13 @@ interface Proposal {
 }
 
 export default function App() {
-  const { isConnected, chainId } = useAccount()
+  const { isConnected, chainId, address } = useAccount()
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [hasVoted, setHasVoted] = useState(false)
+  const [delegateAddress, setDelegateAddress] = useState('')
+  const [voterAddress, setVoterAddress] = useState('')
+  const [isDelegating, setIsDelegating] = useState(false)
+  const [isGrantingRight, setIsGrantingRight] = useState(false)
 
   const currentAddress = chainId ? CONTRACT_ADDRESSES[chainId] : undefined
 
@@ -37,8 +41,26 @@ export default function App() {
     hash,
   })
 
-  // Read Proposals - We'll try to fetch first 4 (assumed based on constructor)
-  // In a real app we might need to know count or handle errors
+  // Check Chairperson
+  const { data: chairpersonAddress } = useReadContract({
+    address: currentAddress,
+    abi: CONTRACT_ABI,
+    functionName: 'chairperson',
+    query: { enabled: !!currentAddress }
+  })
+
+  const isChairperson = chairpersonAddress && address && chairpersonAddress === address
+
+  // Check Voter Status
+  const { data: voterData, refetch: refetchVoter } = useReadContract({
+    address: currentAddress,
+    abi: CONTRACT_ABI,
+    functionName: 'voters',
+    args: [address || '0x0000000000000000000000000000000000000000'],
+    query: { enabled: !!currentAddress && !!address }
+  })
+
+  // Read Proposals
   const { data: prop0, refetch: refetch0 } = useReadContract({
     address: currentAddress,
     abi: CONTRACT_ABI,
@@ -82,14 +104,26 @@ export default function App() {
     refetch2()
     refetch3()
     refetchWinner()
+    refetchVoter()
   }
 
   useEffect(() => {
     if (isTransactionSuccess) {
         setHasVoted(true)
         refetchAll()
+        setIsDelegating(false)
+        setIsGrantingRight(false)
+        setVoterAddress('')
     }
   }, [isTransactionSuccess])
+
+  // Update voted status from contract
+  useEffect(() => {
+    if (voterData) {
+        // voterData is [weight, voted, delegate, vote]
+        setHasVoted(voterData[1])
+    }
+  }, [voterData])
 
 
   // Process raw data into friendly format
@@ -113,12 +147,38 @@ export default function App() {
   }, [prop0, prop1, prop2, prop3])
 
   const handleVote = (index: number) => {
-    if (!isConnected || !currentAddress) return
+    if (!isConnected || !currentAddress || hasVoted) return
+    setIsDelegating(false)
+    setIsGrantingRight(false)
     writeContract({
       address: currentAddress,
       abi: CONTRACT_ABI,
       functionName: 'vote',
       args: [BigInt(index)],
+    })
+  }
+
+  const handleDelegate = () => {
+    if (!isConnected || !currentAddress || !delegateAddress) return
+    setIsDelegating(true)
+    setIsGrantingRight(false)
+    writeContract({
+      address: currentAddress,
+      abi: CONTRACT_ABI,
+      functionName: 'delegate',
+      args: [delegateAddress as `0x${string}`],
+    })
+  }
+
+  const handleGiveRightToVote = () => {
+    if (!isConnected || !currentAddress || !voterAddress || !isChairperson) return
+    setIsDelegating(false)
+    setIsGrantingRight(true)
+    writeContract({
+      address: currentAddress,
+      abi: CONTRACT_ABI,
+      functionName: 'giveRightToVote',
+      args: [voterAddress as `0x${string}`],
     })
   }
 
@@ -134,7 +194,7 @@ export default function App() {
         <appkit-button />
       </div>
 
-      <div className="flex-1 w-full max-w-4xl flex flex-col items-center justify-start pt-10 gap-8">
+      <div className="flex-1 w-full max-w-4xl flex flex-col items-center justify-start pt-10 gap-8 pb-20">
         
         {/* Hero / Instructions */}
         <div className="text-center space-y-2">
@@ -173,19 +233,19 @@ export default function App() {
         {isConfirming && (
            <div className="bg-blue-900/30 border border-blue-800 text-blue-200 px-6 py-3 rounded-2xl flex items-center gap-3 animate-pulse">
              <Loader2 size={24} className="animate-spin" />
-             <span className="text-xl">Confirming vote...</span>
+             <span className="text-xl">{isDelegating ? "Confirming delegation..." : isGrantingRight ? "Confirming authorization..." : "Confirming vote..."}</span>
            </div>
         )}
          {isTransactionLoading && (
            <div className="bg-purple-900/30 border border-purple-800 text-purple-200 px-6 py-3 rounded-2xl flex items-center gap-3 animate-pulse">
              <Loader2 size={24} className="animate-spin" />
-             <span className="text-xl">Voting...</span>
+             <span className="text-xl">{isDelegating ? "Delegating..." : isGrantingRight ? "Authorizing..." : "Voting..."}</span>
            </div>
         )}
         {hasVoted && !isTransactionLoading && !isConfirming && (
             <div className="bg-green-900/30 border border-green-800 text-green-200 px-6 py-3 rounded-2xl flex items-center gap-3">
               <Trophy size={24} className="text-yellow-500" />
-              <span className="text-xl">Thanks for voting!</span>
+              <span className="text-xl">You have voted!</span>
             </div>
         )}
         {writeError && (
@@ -202,8 +262,8 @@ export default function App() {
             <button
               key={prop.index}
               onClick={() => handleVote(prop.index)}
-              disabled={!isConnected || isConfirming || isTransactionLoading}
-              className="group relative h-40 md:h-48 bg-surface rounded-3xl border-2 border-gray-800 hover:border-primary hover:bg-gray-800 transition-all active:scale-95 flex items-center px-8 gap-6 text-left disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+              disabled={!isConnected || isConfirming || isTransactionLoading || hasVoted}
+              className="group relative h-40 md:h-48 bg-surface rounded-3xl border-2 border-gray-800 hover:border-primary hover:bg-gray-800 transition-all active:scale-95 flex items-center px-8 gap-6 text-left disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden disabled:hover:border-gray-800 disabled:hover:bg-surface"
             >
               {/* Icon Box */}
               <div className="w-20 h-20 rounded-2xl bg-gray-900 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-inner">
@@ -221,7 +281,7 @@ export default function App() {
               
               {/* Decoration */}
               <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
-        </button>
+            </button>
           ))}
 
           {proposals.length === 0 && isConnected && (
@@ -230,11 +290,73 @@ export default function App() {
              </div>
           )}
         </div>
-
+        
         {!isConnected && (
           <div className="mt-10 p-6 bg-blue-900/20 rounded-2xl border border-blue-900/50 text-blue-200 text-center max-w-sm">
             <p className="text-lg">Connect your wallet to start voting!</p>
           </div>
+        )}
+
+        {/* Delegation Section */}
+        {isConnected && !hasVoted && (
+            <div className="w-full mt-8 pt-8 border-t border-gray-800">
+                <div className="bg-gray-900/50 rounded-3xl p-8 border border-gray-800">
+                    <div className="flex items-center gap-3 mb-6 text-gray-400">
+                        <UserRound size={24} />
+                        <h3 className="text-xl font-bold uppercase tracking-widest">Delegate Vote</h3>
+                    </div>
+                    <p className="text-gray-500 mb-6">Trust someone else to vote for you? Enter their address below.</p>
+                    
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <input 
+                            type="text" 
+                            placeholder="0x..." 
+                            value={delegateAddress}
+                            onChange={(e) => setDelegateAddress(e.target.value)}
+                            className="flex-1 bg-black/50 border border-gray-700 rounded-xl px-6 py-4 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                        />
+                        <button 
+                            onClick={handleDelegate}
+                            disabled={!delegateAddress || isConfirming || isTransactionLoading}
+                            className="bg-gray-700 hover:bg-gray-600 text-white px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                        >
+                            <span>Delegate</span>
+                            <ArrowRight size={20} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
+        {/* Chairperson Controls */}
+        {isConnected && isChairperson && (
+            <div className="w-full mt-8 pt-8 border-t border-gray-800">
+                <div className="bg-gray-900/50 rounded-3xl p-8 border border-gray-800 shadow-lg shadow-purple-900/10">
+                    <div className="flex items-center gap-3 mb-6 text-purple-400">
+                        <Crown size={24} />
+                        <h3 className="text-xl font-bold uppercase tracking-widest">Chairperson Panel</h3>
+                    </div>
+                    <p className="text-gray-500 mb-6">Authorize a new voter to participate in the ballot.</p>
+                    
+                    <div className="flex flex-col md:flex-row gap-4">
+                        <input 
+                            type="text" 
+                            placeholder="Voter Address (0x...)" 
+                            value={voterAddress}
+                            onChange={(e) => setVoterAddress(e.target.value)}
+                            className="flex-1 bg-black/50 border border-gray-700 rounded-xl px-6 py-4 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                        />
+                        <button 
+                            onClick={handleGiveRightToVote}
+                            disabled={!voterAddress || isConfirming || isTransactionLoading}
+                            className="bg-purple-900/50 hover:bg-purple-800/50 border border-purple-700 text-white px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                        >
+                            <span>Authorize</span>
+                            <UserPlus size={20} />
+                        </button>
+                    </div>
+                </div>
+            </div>
         )}
 
       </div>
