@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi'
 import { CONTRACT_ABI, CONTRACT_ADDRESSES } from './constants'
-import { Building2, School, Stethoscope, Trees, Trophy, Loader2, AlertCircle, UserRound, ArrowRight, Crown, UserPlus } from 'lucide-react'
+import { Building2, School, Stethoscope, Trees, Trophy, Loader2, AlertCircle, UserRound, ArrowRight, Crown, UserPlus, Scale } from 'lucide-react'
 import { base, celo } from '@reown/appkit/networks'
 import { hexToString, trim } from 'viem'
 import { getUserFriendlyError } from './utils/errorHandling'
@@ -32,6 +32,7 @@ export default function App() {
   const [isGrantingRight, setIsGrantingRight] = useState(false)
 
   const [hasRightToVote, setHasRightToVote] = useState(false)
+  const [votingWeight, setVotingWeight] = useState<bigint>(0n)
 
   const currentAddress = chainId ? CONTRACT_ADDRESSES[chainId] : undefined
 
@@ -126,6 +127,7 @@ export default function App() {
         const weight = voterData[0]
         const voted = voterData[1]
         setHasRightToVote(weight > 0n)
+        setVotingWeight(weight)
         setHasVoted(voted)
     }
   }, [voterData])
@@ -152,7 +154,7 @@ export default function App() {
   }, [prop0, prop1, prop2, prop3])
 
   const handleVote = (index: number) => {
-    if (!isConnected || !currentAddress || hasVoted) return
+    if (!isConnected || !currentAddress || hasVoted || !hasRightToVote) return
     setIsDelegating(false)
     setIsGrantingRight(false)
     writeContract({
@@ -209,6 +211,16 @@ export default function App() {
           <p className="text-xl text-gray-400">
             Tap the one you like the most.
           </p>
+          
+          {/* User Weight Badge */}
+          {isConnected && hasRightToVote && (
+            <div className="flex items-center justify-center mt-2">
+                <div className="flex items-center gap-2 text-sm font-medium bg-gray-800/50 px-3 py-1 rounded-full border border-gray-700 text-gray-300">
+                    <Scale size={14} className="text-primary" />
+                    <span>Weight: {votingWeight.toString()}</span>
+                </div>
+            </div>
+          )}
         </div>
 
         {/* Winner Display */}
@@ -275,7 +287,7 @@ export default function App() {
             <button
               key={prop.index}
               onClick={() => handleVote(prop.index)}
-              disabled={!isConnected || isConfirming || isTransactionLoading || hasVoted}
+              disabled={!isConnected || isConfirming || isTransactionLoading || hasVoted || !hasRightToVote}
               className="group relative h-40 md:h-48 bg-surface rounded-3xl border-2 border-gray-800 hover:border-primary hover:bg-gray-800 transition-all active:scale-95 flex items-center px-8 gap-6 text-left disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden disabled:hover:border-gray-800 disabled:hover:bg-surface"
             >
               {/* Icon Box */}
