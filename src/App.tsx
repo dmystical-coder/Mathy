@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi'
 import { CONTRACT_ABI, CONTRACT_ADDRESSES } from './constants'
-import { Building2, School, Stethoscope, Trees, Trophy, Loader2, AlertCircle, UserRound, ArrowRight, Crown, UserPlus, Scale } from 'lucide-react'
+import { Building2, School, Stethoscope, Trees, Trophy, Loader2, AlertCircle, UserRound, ArrowRight, Crown, UserPlus, Scale, Share2, Copy, Check } from 'lucide-react'
 import { base, celo } from '@reown/appkit/networks'
 import { useAppKit } from '@reown/appkit/react'
 import { hexToString, trim } from 'viem'
@@ -32,6 +32,7 @@ export default function App() {
   const [voterAddress, setVoterAddress] = useState('')
   const [isDelegating, setIsDelegating] = useState(false)
   const [isGrantingRight, setIsGrantingRight] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
 
   const [hasRightToVote, setHasRightToVote] = useState(false)
   const [delegateStatus, setDelegateStatus] = useState<`0x${string}` | null>(null)
@@ -223,6 +224,14 @@ export default function App() {
     })
   }
 
+  const handleCopyAddress = () => {
+    if (address) {
+      navigator.clipboard.writeText(address)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 2000)
+    }
+  }
+
   const getIcon = (name: string) => ICONS[name] || FALLBACK_ICON
 
   return (
@@ -302,18 +311,54 @@ export default function App() {
            </div>
         )}
         {hasVoted && !isTransactionLoading && !isConfirming && (
-            <div className="bg-neu-base border-l-4 border-green-500 text-green-400 px-6 py-4 rounded-xl flex items-center gap-4 shadow-neu-out w-full">
-              <div className="p-2 rounded-full shadow-neu-in bg-neu-dark">
-                <Trophy size={24} className="text-yellow-500" />
+            <div className="w-full space-y-6">
+              <div className="bg-neu-base border-l-4 border-green-500 text-green-400 px-6 py-4 rounded-xl flex items-center gap-4 shadow-neu-out w-full">
+                <div className="p-2 rounded-full shadow-neu-in bg-neu-dark">
+                  <Trophy size={24} className="text-yellow-500" />
+                </div>
+                <div className="flex flex-col">
+                    <span className="text-xl font-bold">You have voted!</span>
+                    {delegateStatus ? (
+                        <span className="text-sm opacity-80 break-all">Delegated to: {delegateStatus}</span>
+                    ) : voteStatus !== null && proposals[voteStatus] ? (
+                        <span className="text-sm opacity-80">Voted for: {proposals[voteStatus].name}</span>
+                    ) : null}
+                </div>
               </div>
-              <div className="flex flex-col">
-                  <span className="text-xl font-bold">You have voted!</span>
-                  {delegateStatus ? (
-                      <span className="text-sm opacity-80 break-all">Delegated to: {delegateStatus}</span>
-                  ) : voteStatus !== null && proposals[voteStatus] ? (
-                      <span className="text-sm opacity-80">Voted for: {proposals[voteStatus].name}</span>
-                  ) : null}
-              </div>
+
+              {/* Campaign Section */}
+              {!delegateStatus && (
+                <div className="bg-neu-base rounded-3xl p-8 shadow-neu-out border border-gray-800/50">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div className="space-y-2">
+                       <div className="flex items-center gap-2 text-primary">
+                          <Share2 size={24} />
+                          <h3 className="text-xl font-bold uppercase tracking-widest">Boost Your Impact</h3>
+                       </div>
+                       <p className="text-gray-400 max-w-md">
+                         Even after voting, you can increase your impact! Ask others to delegate their vote to you. 
+                         Any new delegations will immediately add to your vote count.
+                       </p>
+                    </div>
+                    
+                    <div className="flex flex-col items-end gap-3 w-full md:w-auto">
+                       <div className="flex items-center gap-2 text-sm font-medium bg-neu-base px-4 py-2 rounded-full shadow-neu-in text-gray-300 mb-2">
+                          <Scale size={14} className="text-primary" />
+                          <span>Current Weight: {votingWeight.toString()}</span>
+                       </div>
+                       <button 
+                         onClick={handleCopyAddress}
+                         className="group flex items-center gap-3 bg-neu-base hover:text-primary px-6 py-3 rounded-xl shadow-neu-out active:shadow-neu-pressed transition-all w-full md:w-auto justify-center"
+                       >
+                         <span className="font-mono text-gray-400 group-hover:text-primary transition-colors">
+                           {address?.slice(0, 6)}...{address?.slice(-4)}
+                         </span>
+                         {isCopied ? <Check size={18} className="text-green-500" /> : <Copy size={18} />}
+                       </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
         )}
         {writeError && (
