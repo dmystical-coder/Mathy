@@ -3,6 +3,7 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAcc
 import { CONTRACT_ABI, CONTRACT_ADDRESSES } from './constants'
 import { Building2, School, Stethoscope, Trees, Trophy, Loader2, AlertCircle, UserRound, ArrowRight, Crown, UserPlus, Scale } from 'lucide-react'
 import { base, celo } from '@reown/appkit/networks'
+import { useAppKit } from '@reown/appkit/react'
 import { hexToString, trim } from 'viem'
 import { getUserFriendlyError } from './utils/errorHandling'
 
@@ -24,6 +25,7 @@ interface Proposal {
 
 export default function App() {
   const { isConnected, chainId, address } = useAccount()
+  const { close } = useAppKit()
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [hasVoted, setHasVoted] = useState(false)
   const [delegateAddress, setDelegateAddress] = useState('')
@@ -110,6 +112,10 @@ export default function App() {
     setHasRightToVote(false)
     setDelegateStatus(null)
     setVoteStatus(null)
+    
+    // Close the AppKit modal if it's open
+    close()
+    
     // Wagmi hooks will naturally refetch when chainId/address changes
   }, [chainId, address])
 
