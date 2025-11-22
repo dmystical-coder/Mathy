@@ -3,7 +3,25 @@
 @tailwind utilities;
 
 body {
-  background-color: #0a0a0a;
-  color: #ededed;
-  font-family: 'Inter', sans-serif; /* Will need to ensure a nice font is available or just rely on sans */
+  background-color: #2d2d2d;
+  color: #e0e0e0;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Custom Scrollbar for Skeuomorphic feel */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2d2d2d; 
+}
+
+::-webkit-scrollbar-thumb {
+  background: #404040; 
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a; 
 }

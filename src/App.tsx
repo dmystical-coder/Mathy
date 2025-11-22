@@ -102,6 +102,17 @@ export default function App() {
     query: { enabled: !!currentAddress }
   })
 
+  useEffect(() => {
+    // Reset state on network switch
+    setHasVoted(false)
+    setProposals([])
+    setVotingWeight(0n)
+    setHasRightToVote(false)
+    setDelegateStatus(null)
+    setVoteStatus(null)
+    // Wagmi hooks will naturally refetch when chainId/address changes
+  }, [chainId, address])
+
   // Refresh data on load and after vote
   const refetchAll = () => {
     refetch0()
@@ -209,11 +220,11 @@ export default function App() {
   const getIcon = (name: string) => ICONS[name] || FALLBACK_ICON
 
   return (
-    <div className="min-h-screen bg-background text-text flex flex-col items-center p-4 select-none font-sans">
+    <div className="min-h-screen bg-neu-base text-text flex flex-col items-center p-4 select-none font-sans">
       {/* Header */}
-      <div className="w-full flex justify-between items-center p-4">
-         <div className="flex items-center gap-2">
-            <span className="text-xl font-bold tracking-widest uppercase text-gray-500">BALLOT</span>
+      <div className="w-full flex justify-between items-center p-4 max-w-6xl">
+         <div className="flex items-center gap-2 p-3 rounded-xl shadow-neu-out-sm">
+            <span className="text-xl font-bold tracking-widest uppercase text-gray-400 px-2">BALLOT</span>
          </div>
         <appkit-button />
       </div>
@@ -222,7 +233,7 @@ export default function App() {
         
         {/* Hero / Instructions */}
         <div className="text-center space-y-2">
-          <h1 className="text-4xl md:text-5xl font-extrabold text-white">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-gray-200 drop-shadow-lg">
             Vote for the Best!
           </h1>
           <p className="text-xl text-gray-400">
@@ -231,8 +242,8 @@ export default function App() {
           
           {/* User Weight Badge */}
           {isConnected && hasRightToVote && (
-            <div className="flex items-center justify-center mt-2">
-                <div className="flex items-center gap-2 text-sm font-medium bg-gray-800/50 px-3 py-1 rounded-full border border-gray-700 text-gray-300">
+            <div className="flex items-center justify-center mt-4">
+                <div className="flex items-center gap-2 text-sm font-medium bg-neu-base px-4 py-2 rounded-full shadow-neu-in text-gray-300">
                     <Scale size={14} className="text-primary" />
                     <span>Weight: {votingWeight.toString()}</span>
                 </div>
@@ -242,14 +253,14 @@ export default function App() {
 
         {/* Winner Display */}
         {winnerName && (
-            <div className="w-full p-6 bg-gradient-to-r from-yellow-900/20 via-orange-900/20 to-yellow-900/20 border border-yellow-800/50 rounded-3xl flex flex-col md:flex-row items-center justify-center md:justify-between px-8 gap-4 shadow-lg shadow-orange-900/10">
+            <div className="w-full p-6 bg-neu-base rounded-3xl flex flex-col md:flex-row items-center justify-center md:justify-between px-8 gap-4 shadow-neu-out border-l-4 border-yellow-500/50">
                 <div className="flex items-center gap-3 text-yellow-500 uppercase tracking-widest font-bold text-sm">
-                    <div className="p-2 bg-yellow-500/20 rounded-full">
+                    <div className="p-3 bg-neu-base rounded-full shadow-neu-out text-yellow-500">
                       <Trophy size={20} />
                     </div>
                     <span>Current Leader</span>
                 </div>
-                <div className="text-3xl md:text-4xl font-black text-white tracking-tight">
+                <div className="text-3xl md:text-4xl font-black text-gray-200 tracking-tight drop-shadow-md">
                     {hexToString(trim(winnerName, { dir: 'right' }))}
                 </div>
             </div>
@@ -257,36 +268,38 @@ export default function App() {
 
         {/* Network Warning */}
         {isConnected && chainId !== base.id && chainId !== celo.id && (
-           <div className="bg-red-900/30 border border-red-800 text-red-200 px-4 py-2 rounded-xl flex items-center gap-2">
-             <AlertCircle size={20} />
-             <span>Please switch to Base or Celo</span>
+           <div className="bg-neu-base border-l-4 border-red-500 text-red-400 px-6 py-4 rounded-xl flex items-center gap-3 shadow-neu-out w-full">
+             <AlertCircle size={24} />
+             <span className="font-medium">Please switch to Base or Celo network</span>
            </div>
         )}
 
         {/* Voting Right Warning */}
         {isConnected && !hasRightToVote && !hasVoted && (
-           <div className="bg-yellow-900/30 border border-yellow-800 text-yellow-200 px-4 py-2 rounded-xl flex items-center gap-2">
-             <AlertCircle size={20} />
-             <span>You do not have voting rights yet.</span>
+           <div className="bg-neu-base border-l-4 border-yellow-500 text-yellow-500 px-6 py-4 rounded-xl flex items-center gap-3 shadow-neu-out w-full">
+             <AlertCircle size={24} />
+             <span className="font-medium">You do not have voting rights yet.</span>
            </div>
         )}
 
         {/* Status Messages */}
         {isConfirming && (
-           <div className="bg-blue-900/30 border border-blue-800 text-blue-200 px-6 py-3 rounded-2xl flex items-center gap-3 animate-pulse">
+           <div className="bg-neu-base border-l-4 border-blue-500 text-blue-400 px-6 py-4 rounded-xl flex items-center gap-4 shadow-neu-out animate-pulse w-full">
              <Loader2 size={24} className="animate-spin" />
-             <span className="text-xl">{isDelegating ? "Confirming delegation..." : isGrantingRight ? "Confirming authorization..." : "Confirming vote..."}</span>
+             <span className="text-xl font-medium">{isDelegating ? "Confirming delegation..." : isGrantingRight ? "Confirming authorization..." : "Confirming vote..."}</span>
            </div>
         )}
          {isTransactionLoading && (
-           <div className="bg-purple-900/30 border border-purple-800 text-purple-200 px-6 py-3 rounded-2xl flex items-center gap-3 animate-pulse">
+           <div className="bg-neu-base border-l-4 border-purple-500 text-purple-400 px-6 py-4 rounded-xl flex items-center gap-4 shadow-neu-out animate-pulse w-full">
              <Loader2 size={24} className="animate-spin" />
-             <span className="text-xl">{isDelegating ? "Delegating..." : isGrantingRight ? "Authorizing..." : "Voting..."}</span>
+             <span className="text-xl font-medium">{isDelegating ? "Delegating..." : isGrantingRight ? "Authorizing..." : "Voting..."}</span>
            </div>
         )}
         {hasVoted && !isTransactionLoading && !isConfirming && (
-            <div className="bg-green-900/30 border border-green-800 text-green-200 px-6 py-3 rounded-2xl flex items-center gap-3">
-              <Trophy size={24} className="text-yellow-500 shrink-0" />
+            <div className="bg-neu-base border-l-4 border-green-500 text-green-400 px-6 py-4 rounded-xl flex items-center gap-4 shadow-neu-out w-full">
+              <div className="p-2 rounded-full shadow-neu-in bg-neu-dark">
+                <Trophy size={24} className="text-yellow-500" />
+              </div>
               <div className="flex flex-col">
                   <span className="text-xl font-bold">You have voted!</span>
                   {delegateStatus ? (
@@ -298,7 +311,7 @@ export default function App() {
             </div>
         )}
         {writeError && (
-            <div className="bg-red-900/30 border border-red-800 text-red-200 px-6 py-3 rounded-2xl flex items-center gap-3">
+            <div className="bg-neu-base border-l-4 border-red-500 text-red-400 px-6 py-4 rounded-xl flex items-center gap-4 shadow-neu-out w-full">
               <AlertCircle size={24} className="shrink-0" />
               <span className="text-lg font-medium">{getUserFriendlyError(writeError)}</span>
             </div>
@@ -306,30 +319,27 @@ export default function App() {
 
 
         {/* Proposals Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
           {proposals.map((prop) => (
             <button
               key={prop.index}
               onClick={() => handleVote(prop.index)}
               disabled={!isConnected || isConfirming || isTransactionLoading || hasVoted || !hasRightToVote}
-              className="group relative h-40 md:h-48 bg-surface rounded-3xl border-2 border-gray-800 hover:border-primary hover:bg-gray-800 transition-all active:scale-95 flex items-center px-8 gap-6 text-left disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden disabled:hover:border-gray-800 disabled:hover:bg-surface"
+              className="group relative h-48 bg-neu-base rounded-3xl shadow-neu-out active:shadow-neu-pressed hover:-translate-y-1 transition-all duration-200 flex items-center px-8 gap-6 text-left disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-neu-out disabled:hover:translate-y-0 overflow-hidden"
             >
               {/* Icon Box */}
-              <div className="w-20 h-20 rounded-2xl bg-gray-900 flex items-center justify-center text-primary group-hover:scale-110 transition-transform shadow-inner">
+              <div className="w-20 h-20 rounded-2xl bg-neu-base shadow-neu-out flex items-center justify-center text-primary group-hover:text-blue-400 transition-colors">
                 {getIcon(prop.name)}
               </div>
 
               {/* Content */}
               <div className="flex-1 z-10">
-                <h2 className="text-2xl font-bold text-white mb-1">{prop.name}</h2>
+                <h2 className="text-2xl font-bold text-gray-200 mb-2">{prop.name}</h2>
                 <div className="flex items-center gap-2 text-gray-400">
-                  <span className="text-sm uppercase tracking-wider font-medium">Current Votes</span>
-                  <span className="text-xl font-mono text-white bg-gray-900 px-2 rounded-lg">{prop.voteCount.toString()}</span>
+                  <span className="text-sm uppercase tracking-wider font-medium">Votes</span>
+                  <span className="text-xl font-mono text-gray-300 bg-neu-base shadow-neu-in px-3 py-1 rounded-lg">{prop.voteCount.toString()}</span>
                 </div>
               </div>
-              
-              {/* Decoration */}
-              <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/20 transition-colors" />
             </button>
           ))}
 
@@ -341,33 +351,35 @@ export default function App() {
         </div>
         
         {!isConnected && (
-          <div className="mt-10 p-6 bg-blue-900/20 rounded-2xl border border-blue-900/50 text-blue-200 text-center max-w-sm">
-            <p className="text-lg">Connect your wallet to start voting!</p>
+          <div className="mt-10 p-8 bg-neu-base rounded-3xl shadow-neu-out text-blue-400 text-center max-w-sm mx-auto">
+            <p className="text-lg font-medium">Connect your wallet to start voting!</p>
           </div>
         )}
 
         {/* Delegation Section */}
         {isConnected && !hasVoted && (
-            <div className="w-full mt-8 pt-8 border-t border-gray-800">
-                <div className="bg-gray-900/50 rounded-3xl p-8 border border-gray-800">
+            <div className="w-full mt-8 pt-8 border-t border-gray-800/50">
+                <div className="bg-neu-base rounded-3xl p-8 shadow-neu-out">
                     <div className="flex items-center gap-3 mb-6 text-gray-400">
-                        <UserRound size={24} />
+                        <div className="p-2 bg-neu-base shadow-neu-out rounded-lg">
+                            <UserRound size={24} />
+                        </div>
                         <h3 className="text-xl font-bold uppercase tracking-widest">Delegate Vote</h3>
                     </div>
-                    <p className="text-gray-500 mb-6">Trust someone else to vote for you? Enter their address below.</p>
+                    <p className="text-gray-500 mb-6 font-medium">Trust someone else to vote for you? Enter their address below.</p>
                     
-                    <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex flex-col md:flex-row gap-6">
                         <input 
                             type="text" 
                             placeholder="0x..." 
                             value={delegateAddress}
                             onChange={(e) => setDelegateAddress(e.target.value)}
-                            className="flex-1 bg-black/50 border border-gray-700 rounded-xl px-6 py-4 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                            className="flex-1 bg-neu-base shadow-neu-in rounded-xl px-6 py-4 text-gray-200 focus:outline-none focus:shadow-neu-pressed transition-all placeholder-gray-600"
                         />
                         <button 
                             onClick={handleDelegate}
                             disabled={!delegateAddress || isConfirming || isTransactionLoading}
-                            className="bg-gray-700 hover:bg-gray-600 text-white px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                            className="bg-neu-base text-gray-300 shadow-neu-out hover:text-primary active:shadow-neu-pressed px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
                             <span>Delegate</span>
                             <ArrowRight size={20} />
@@ -379,30 +391,32 @@ export default function App() {
 
         {/* Chairperson Controls */}
         {isConnected && isChairperson && (
-            <div className="w-full mt-8 pt-8 border-t border-gray-800">
-                <div className="bg-gray-900/50 rounded-3xl p-8 border border-gray-800 shadow-lg shadow-purple-900/10">
+            <div className="w-full mt-8 pt-8 border-t border-gray-800/50">
+                <div className="bg-neu-base rounded-3xl p-8 shadow-neu-out border-l-4 border-purple-500/50">
                     <div className="flex items-center gap-3 mb-6 text-purple-400">
-                        <Crown size={24} />
+                        <div className="p-2 bg-neu-base shadow-neu-out rounded-lg text-purple-500">
+                            <Crown size={24} />
+                        </div>
                         <h3 className="text-xl font-bold uppercase tracking-widest">Chairperson Panel</h3>
                     </div>
-                    <p className="text-gray-500 mb-6">Authorize a new voter to participate in the ballot.</p>
+                    <p className="text-gray-500 mb-6 font-medium">Authorize a new voter to participate in the ballot.</p>
                     
-                    <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex flex-col md:flex-row gap-6">
                         <input 
                             type="text" 
                             placeholder="Voter Address (0x...)" 
                             value={voterAddress}
                             onChange={(e) => setVoterAddress(e.target.value)}
-                            className="flex-1 bg-black/50 border border-gray-700 rounded-xl px-6 py-4 text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                            className="flex-1 bg-neu-base shadow-neu-in rounded-xl px-6 py-4 text-gray-200 focus:outline-none focus:shadow-neu-pressed transition-all placeholder-gray-600"
                         />
                         <button 
                             onClick={handleGiveRightToVote}
                             disabled={!voterAddress || isConfirming || isTransactionLoading}
-                            className="bg-purple-900/50 hover:bg-purple-800/50 border border-purple-700 text-white px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+                            className="bg-neu-base text-purple-400 shadow-neu-out hover:text-purple-300 active:shadow-neu-pressed px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         >
                             <span>Authorize</span>
                             <UserPlus size={20} />
-        </button>
+                        </button>
                     </div>
                 </div>
             </div>
